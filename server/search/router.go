@@ -4,6 +4,6 @@ import "github.com/gin-gonic/gin"
 
 func Router(r *gin.Engine) {
 	r.Use(gin.Logger(), gin.Recovery())
-	r.GET("/healthy", Routehealth)
 	r.GET("/search", FindAll)
+	
 }

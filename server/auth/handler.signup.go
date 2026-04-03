@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"profile/connections"
 
 	"github.com/gin-gonic/gin"
@@ -33,13 +34,31 @@ func Checkexist(c *gin.Context) {
 }
 
 func Signup(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"status": "Signed UP",
-	})
-}
+	var data connections.LogStruct
 
-func Health(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"Status": "Healthy",
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"err": "Invalid data format",
+		})
+		return
+	}
+
+	if data.Email == "" || data.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"err": "email and password are required",
+		})
+		return
+	}
+
+	err := connections.SignUp(data)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"err": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"msg": "Signed up successfully",
 	})
 }

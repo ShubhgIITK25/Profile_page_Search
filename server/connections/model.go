@@ -10,6 +10,10 @@ type ProfileStr struct {
 	Roll_no string `json:"roll"`
 }
 
+func (ProfileStr) TableName() string {
+	return "profile"
+}
+
 type ProfileFetch struct {
 	Name    string `json:"name"`
 	Roll_no string `json:"roll"`

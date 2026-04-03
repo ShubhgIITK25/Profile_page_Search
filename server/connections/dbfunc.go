@@ -1,14 +1,25 @@
 package connections
 
 func Checkexist(email string) (bool, error) {
-	var exists bool
+	var count int64
 
-	query := `SELECT EXISTS(SELECT 1 FROM users WHERE email=$1)`
-	err := DB.QueryRow(query, email).Scan(&exists)
+	err := DB.Model(&ProfileStr{}).
+		Where("email = ?", email).
+		Count(&count).Error
 
 	if err != nil {
 		return false, err
 	}
 
-	return exists, nil
+	return count > 0, nil
+}
+
+func FindAll() ([]ProfileStr, error) {
+	var users []ProfileStr
+	result := DB.Find(&users)
+	if result.Error != nil {
+		return nil, result.Error
+
+	}
+	return users, nil
 }

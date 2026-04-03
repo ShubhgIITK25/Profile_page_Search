@@ -1,15 +1,16 @@
 package connections
 
 import (
-	"database/sql"
 	"fmt"
+	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-var DB *sql.DB
+var DB *gorm.DB
 var log = logrus.New()
 
 func init() {
@@ -26,24 +27,36 @@ func Dbconnect() {
 	port := viper.GetString("db.port")
 
 	if user == "" || password == "" || dbname == "" || host == "" || port == "" {
-		log.Fatalf("[DB ERROR] Missing database configuration - user: %s, dbname: %s, host: %s, port: %s", user, dbname, host, port)
+		log.Fatal("[DB ERROR] Missing database configuration")
 	}
 
-	Connecstr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable", user, password, dbname, host, port)
-	log.Infof("[DB] Connection string: user=%s password=*** dbname=%s host=%s port=%s", user, dbname, host, port)
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Kolkata",
+		host, user, password, dbname, port,
+	)
 
-	db, err := sql.Open("postgres", Connecstr)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("[DB ERROR] Failed to open database: %v", err)
+		log.Fatalf("[DB ERROR] Failed to connect database: %v", err)
 	}
 
-	log.Info("[DB] Attempting to ping database...")
-	err = db.Ping()
-
+	// ✅ Get underlying sql.DB for pool config
+	sqlDB, err := db.DB()
 	if err != nil {
-		log.Fatalf("[DB ERROR] Failed to ping database: %v", err)
+		log.Fatalf("[DB ERROR] Failed to get sql.DB: %v", err)
 	}
-	log.Info("[DB] Database connected successfully")
+
+	// ✅ Connection Pool
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+
+	log.Info("[DB] Database connected successfully ✅")
 
 	DB = db
+
+	err = DB.AutoMigrate(&ProfileStr{})
+	if err != nil {
+		log.Fatalf("[DB ERROR] Failed to migrate database: %v", err)
+	}
 }
